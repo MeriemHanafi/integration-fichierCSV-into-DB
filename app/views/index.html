@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intégration Faculté et Département</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f7;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #3498db;
+            text-align: center;
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: bold;
+        }
+        input[type="file"] {
+            margin-top: 10px;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Gestion des Facultés et Départements</h1>
+
+    <!-- Étape 1 : Choisir une université -->
+    <div class="form-group">
+        <label for="university">Sélectionnez une université :</label>
+        <select id="university" required>
+            <option value="">--Choisir une université--</option>
+        </select>
+    </div>
+
+    <!-- Étape 2 : Intégrer les facultés -->
+    <form id="uploadFaculties" enctype="multipart/form-data">
+        <input type="file" id="file" name="file" accept=".csv" required />
+        <button class="btn" type="submit">Téléchargez le fichier CSV des facultés </button>
+    </form>
+    
+    <div id="resultFaculties"></div>
+
+    <!-- Étape 3 : Choisir une faculté -->
+    <div class="form-group">
+        <label for="faculty">Sélectionnez une faculté :</label>
+        <select id="faculty" >
+            <option value="">--Choisir une faculté--</option>
+        </select>
+    </div>
+   
+    <!-- Étape 4 : Intégrer les départements -->
+    <form id="uploadDepartments" enctype="multipart/form-data">
+        <input type="file" id="file" name="file" accept=".csv" required />
+        <button class="btn" type="submit">Téléchargez le fichier CSV des départements </button>
+    </form>
+
+    <div id="resultDepartments"></div>
+</div>
+
+<script>
+        $(document).ready(function() {
+        async function loadInitialData() {
+            try {
+                const universities = await $.get('/api/universities');
+                universities.forEach(uni => {
+                    $('#university').append(`<option value="${uni.idUni}">${uni.nomUni}</option>`);
+                });
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        $('#university').change(async function() {
+            const uniId = $(this).val();
+            if (!uniId) console.log("choisx uni fait");
+
+            try {
+                const faculties = await $.get('/api/faculties', { universityId: uniId });
+                $('#faculty').empty().append('<option value="">--Choisir une faculté--</option>');
+                faculties.forEach(fac => {
+                    $('#faculty').append(`<option value="${fac.idFaculty}">${fac.nomFaculty}</option>`);
+                });
+            } catch (error) {
+                console.error(error);
+            }
+        });
+
+        $('#uploadFaculties').submit(function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    formData.append('universityId', $('#university').val());
+    // Vérification dans la console
+    for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+    }
+    $.ajax({
+        url: '/api/file/uploadFaculties',
+        type: 'POST',
+        data: formData,
+        processData: false, // Nécessaire pour FormData
+        contentType: false, // Nécessaire pour FormData
+        success: function(response) {
+                    $('#resultFaculties').html(`
+                        <div style="margin-top:20px;padding:10px;background:#f0f0f0;">
+                            <p><strong>Statut:</strong> ${response.status}</p>
+                            <p><strong>Fichier:</strong> ${response.filename}</p>
+                            <p><strong>Message:</strong> ${response.message}</p>
+                            ${response.count ? `<p><strong>Facultés importés:</strong> ${response.count}</p>` : ''}
+                        </div>
+                    `);
+                },
+                error: function(xhr) {
+                    $('#result').html(`
+                        <div style="margin-top:20px;padding:10px;background:#ffebee;color:#d32f2f;">
+                            <p><strong>Erreur:</strong> ${xhr.responseJSON?.message || 'Erreur inconnue'}</p>
+                        </div>
+                    `);
+                }
+    });
+});
+        $('#uploadDepartments').submit(function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('facultyId', $('#faculty').val());
+
+            $.ajax({
+                url: '/api/file/uploadDepartments',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    $('#resultDepartments').html(`
+                        <div style="margin-top:20px;padding:10px;background:#f0f0f0;">
+                            <p><strong>Statut:</strong> ${response.status}</p>
+                            <p><strong>Fichier:</strong> ${response.filename}</p>
+                            <p><strong>Message:</strong> ${response.message}</p>
+                            ${response.count ? `<p><strong>Départements importées:</strong> ${response.count}</p>` : ''}
+                        </div>
+                    `);
+                },
+                error: function(xhr) {
+                    $('#resultDepartments').html(`
+                        <div style="margin-top:20px;padding:10px;background:#ffebee;color:#d32f2f;">
+                            <p><strong>Erreur:</strong> ${xhr.responseJSON?.message || 'Erreur inconnue'}</p>
+                        </div>
+                    `);
+                }
+            });
+        });
+
+        loadInitialData();
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model University {
+    idUni         Int           @id @default(autoincrement())
+    nomUni        String
+    adresseUni    String
+    telephoneUni  String
+    emailUni      String     @unique
+    faculties     Faculty[]
+    departments Department[]
+}
+
+model Faculty {
+    idFaculty                  Int                   @id @default(autoincrement())
+    nomFaculty                 String
+    idUni    Int
+    university       University         @relation(fields: [idUni], references: [idUni], onDelete: Cascade)
+    cursusUniversitaire CursusUniversitaire[]
+    departments         Department[]
+}
+
+model Department {
+    idDepart                 Int                   @id @default(autoincrement())
+    nomDepart                 String
+    idFaculty          Int
+    faculty             Faculty               @relation(fields: [idFaculty], references: [idFaculty], onDelete: Cascade)
+    university  University @relation(fields: [idUni], references: [idUni], onDelete: Cascade) // Relation inverse ajoutée
+    idUni      Int
+    cursus CursusUniversitaire[]
+}
+
+model Etudiant {
+    idEtudiant                  Int                   @id @default(autoincrement())
+    nom                 String
+    prenom              String
+    email               String                @unique
+    matricule           String                @unique
+    telephone           String                @unique
+    dateNaissance      DateTime
+    lieuNaissance      String
+    cursus CursusUniversitaire[]
+}
+model CursusUniversitaire {
+    id               Int                @id @default(autoincrement())
+    section          String
+    groupe           String
+    filiere          String
+    idFaculty       Int?
+    faculty          Faculty?           @relation(fields: [idFaculty], references: [idFaculty], onDelete: Cascade)
+    idDepart   Int?
+    department      Department?       @relation(fields: [idDepart], references: [idDepart], onDelete: Cascade)
+    specialite       String?
+    moyenneAnnuelle Float?           
+    idAnnee         Int
+    annee            AnneeUniversitaire @relation(fields: [idAnnee], references: [idAnnee], onDelete: Cascade)
+    niveau           Int
+    Etudiant         Etudiant?          @relation(fields: [idEtudiant], references: [idEtudiant])
+    idEtudiant      Int?
+}
+
+model AnneeUniversitaire {
+    idAnnee                  Int                   @id @default(autoincrement())
+    annee               Int
+    isCurrent           Boolean
+    cursus CursusUniversitaire[]
+}
